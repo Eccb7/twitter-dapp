@@ -1,43 +1,65 @@
-// SPDX-License-Identifier: MIT
-// OpenZeppelin Contracts (last updated v5.0.0) (utils/math/SignedMath.sol)
+// SPDX-License-Identifier: UNLICENSED
+pragma solidity >=0.8.0;
 
-pragma solidity ^0.8.20;
+import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
+import "@openzeppelin/contracts/utils/Strings.sol";
+import "@openzeppelin/contracts/utils/Base64.sol";
 
-/**
- * @dev Standard signed math utilities missing in the Solidity language.
- */
-library SignedMath {
-    /**
-     * @dev Returns the largest of two signed numbers.
-     */
-    function max(int256 a, int256 b) internal pure returns (int256) {
-        return a > b ? a : b;
+
+contract TwitterDapp is ERC721("TwitterDApp", "TDAPP") {
+    uint256 tokenId;
+    tweet[] public tweets;
+
+    struct tweet{
+        string name;
+        string description;
+        uint256 upvotes;
+        string[] comments;
+        address fromAddress;
     }
 
-    /**
-     * @dev Returns the smallest of two signed numbers.
-     */
-    function min(int256 a, int256 b) internal pure returns (int256) {
-        return a < b ? a : b;
+    function tokenURI(uint256 _tokenId)
+        public
+        view
+        override
+        returns (string memory)
+    {
+        bytes memory dataURI = abi.encodePacked(
+            '{',
+                '"name":', '"', tweets[_tokenId].name, '",'  '"description":' , '"',  tweets[_tokenId].description, '"', ',' ,
+
+            '"attributes":', '[', '{', '"trait_type":', '"Upvotes",' , '"value":', Strings.toString(tweets[_tokenId].upvotes), '}', ']' , '}'
+        );
+
+        return string(
+            abi.encodePacked(
+                "data:application/json;base64,",
+                Base64.encode(dataURI)
+            )
+        );
     }
 
-    /**
-     * @dev Returns the average of two signed numbers without overflow.
-     * The result is rounded towards zero.
-     */
-    function average(int256 a, int256 b) internal pure returns (int256) {
-        // Formula from the book "Hacker's Delight"
-        int256 x = (a & b) + ((a ^ b) >> 1);
-        return x + (int256(uint256(x) >> 255) & (a ^ b));
+    function writeTweet(string memory prefName, string memory prefDesc) public {
+        _safeMint(msg.sender, tokenId);
+        tweets.push(tweet({
+            name: prefName,
+            description: prefDesc,
+            upvotes: 0,
+            comments: new string[](0),
+            fromAddress: msg.sender
+        }));
+        tokenId = tokenId + 1;
     }
 
-    /**
-     * @dev Returns the absolute unsigned value of a signed value.
-     */
-    function abs(int256 n) internal pure returns (uint256) {
-        unchecked {
-            // must be unchecked in order to support `n = type(int256).min`
-            return uint256(n >= 0 ? n : -n);
-        }
+    function upvote(uint tweetIndex) public {
+        tweets[tweetIndex].upvotes += 1;
+    }
+
+    function addComment(uint256 tweetIndex, string memory prefComments) public {
+        tweets[tweetIndex].comments.push(prefComments);
+    }
+
+    function getAllTweets() public view returns(tweet[] memory) {
+        return tweets;
     }
 }
